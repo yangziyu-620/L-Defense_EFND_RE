@@ -47,7 +47,7 @@ def get_LIAR_six_cls_labels(dataset_type):
 
 def read_json(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
-        news_dataset = json.load(f)
+        news_dataset = json.load(f)  # a list contain all data.
     return news_dataset
 
 
@@ -91,8 +91,7 @@ def get_raw_datasets(dataset, dataset_dir=None):
             read_RAWFC(_p) for _p in [train_dataset_path, dev_dataset_path, test_dataset_path]]
     elif dataset == "RAWFC_step2" or dataset == "LIAR_RAW_step2":
         dataset_dir = dataset_dir or DATASET2PATH[dataset]
-        train_dataset_path = os.path.join(dataset_dir, "train_10_evidence_details.json")
-        # if top-k == 10
+        train_dataset_path = os.path.join(dataset_dir, "train_10_evidence_details.json")  # if top-k == 10
         dev_dataset_path = os.path.join(dataset_dir, "eval_10_evidence_details.json")
         test_dataset_path = os.path.join(dataset_dir, "test_10_evidence_details.json")
         train_dataset_raw, dev_dataset_raw, test_dataset_raw = [
@@ -103,16 +102,17 @@ def get_raw_datasets(dataset, dataset_dir=None):
     return train_dataset_raw, dev_dataset_raw, test_dataset_raw
 
 
+# Used in Step-1
 class NewsDataset(Dataset):
     def __init__(
             self, dataset_name, news_dataset, tokenizer, max_seq_length=128,
-            nums_label=6, report_each_claim=None, *args, **kwargs
-    ):
+            nums_label=6, report_each_claim=None, *args, **kwargs):
+
         self.dataset_name = dataset_name
         self.tokenizer = tokenizer
         self.max_seq_length = max_seq_length
         self.nums_label = nums_label
-        self.label_dir = LABEL_IDS[dataset_name]
+        self.label_dict = LABEL_IDS[dataset_name]
         self.dataset_path = None
         self.report_each_claim = report_each_claim
 
@@ -127,11 +127,8 @@ class NewsDataset(Dataset):
         )
 
     def load_raw(self, dataset):
-        """parsing dict objs to list """
-        # event_id, claim, label, explain,
-        # (link, content, domain, report_sents, report_sents_is_evidence,
-        # report_sents_belong_which_report)
-
+        '''parsing dict objs to list '''
+        # event_id, claim, label, explain, (link, content, domain, report_sents, report_sents_is_evidence, report_sents_belong_which_report)
         raw_data = [[] for _ in range(11)]
         for obj in tqdm(dataset):
             # each sample has one
@@ -164,101 +161,100 @@ class NewsDataset(Dataset):
                     report_sents_labels.append(sentence['is_evidence'])
                     report_sents_belong.append(r_id)
 
-                raw_data[4].append(report_links)
-                raw_data[5].append(report_contents)
-                raw_data[6].append(report_domains)
+            raw_data[4].append(report_links)
+            raw_data[5].append(report_contents)
+            raw_data[6].append(report_domains)
 
-                raw_data[7].append(report_sents)
-                raw_data[8].append(report_sents_labels)
-                raw_data[9].append(report_sents_belong)
+            raw_data[7].append(report_sents)
+            raw_data[8].append(report_sents_labels)
+            raw_data[9].append(report_sents_belong)
 
-                raw_data[10].append(num_sentences_per_report)
+            raw_data[10].append(num_sentences_per_report)
 
-            return raw_data
+        return raw_data
 
-        def __getitem__(self, index):
+    def __getitem__(self, index):
 
-            claim_tokenized = self.tokenizer(self.claim[index], return_tensors='pt', padding=True, truncation=True,
-                                             max_length=self.max_seq_length)
-            claim_input_ids, claim_mask_ids = claim_tokenized['input_ids'].squeeze(), claim_tokenized[
-                'attention_mask'].squeeze()
-            claim_label_id = torch.tensor(self.label_dict[self.label[index]], dtype=torch.long)
+        claim_tokenized = self.tokenizer(self.claim[index], return_tensors='pt', padding=True, truncation=True,
+                                         max_length=self.max_seq_length)
+        claim_input_ids, claim_mask_ids = claim_tokenized['input_ids'].squeeze(), claim_tokenized[
+            'attention_mask'].squeeze()
+        claim_label_id = torch.tensor(self.label_dict[self.label[index]], dtype=torch.long)
 
-            sent_tokenized = self.tokenizer(self.report_sents[index], return_tensors='pt', padding=True,
-                                            truncation=True, max_length=self.max_seq_length)
-            sent_input_ids, sent_mask_ids = sent_tokenized['input_ids'], sent_tokenized['attention_mask']
-            sent_label_ids = torch.tensor(self.report_sents_labels[index], dtype=torch.long)
+        sent_tokenized = self.tokenizer(self.report_sents[index], return_tensors='pt', padding=True, truncation=True,
+                                        max_length=self.max_seq_length)
+        sent_input_ids, sent_mask_ids = sent_tokenized['input_ids'], sent_tokenized['attention_mask']
+        sent_label_ids = torch.tensor(self.report_sents_labels[index], dtype=torch.long)
 
-            decoder_input_tokenized = self.tokenizer(self.explain[index], return_tensors='pt', padding=True,
-                                                     truncation=True, max_length=self.max_seq_length)
-            decoder_input_ids, decoder_mask_ids = decoder_input_tokenized['input_ids'].squeeze(), \
-                decoder_input_tokenized['attention_mask'].squeeze()
+        decoder_input_tokenized = self.tokenizer(self.explain[index], return_tensors='pt', padding=True,
+                                                 truncation=True, max_length=self.max_seq_length)
+        decoder_input_ids, decoder_mask_ids = decoder_input_tokenized['input_ids'].squeeze(), decoder_input_tokenized[
+            'attention_mask'].squeeze()
 
-            num_sentences_per_report = torch.tensor(self.num_sentences_per_report[index], dtype=torch.long)
+        num_sentences_per_report = torch.tensor(self.num_sentences_per_report[index], dtype=torch.long)
 
-            # fixed new
-            raw_text_dict = {
-                'event_id': self.event_id[index],
-                'claim': self.claim[index],
-                'sents': self.report_sents[index],
-                'sents_labels': self.report_sents_labels[index],
-                'explain': self.explain[index]
-            }
+        raw_text_dict = {}
+        raw_text_dict['event_id'] = self.event_id[index]
+        raw_text_dict['claim'] = self.claim[index]
+        raw_text_dict['sents'] = self.report_sents[index]
+        raw_text_dict['sents_labels'] = self.report_sents_labels[index]
+        raw_text_dict['explain'] = self.explain[index]
 
-            return claim_input_ids, claim_mask_ids, claim_label_id, \
-                sent_input_ids, sent_mask_ids, sent_label_ids, \
-                decoder_input_ids, decoder_mask_ids, \
-                num_sentences_per_report, raw_text_dict
+        return claim_input_ids, claim_mask_ids, claim_label_id, \
+            sent_input_ids, sent_mask_ids, sent_label_ids, \
+            decoder_input_ids, decoder_mask_ids, \
+            num_sentences_per_report, raw_text_dict
 
-        def data_collate_fn(self, batch):
+    def data_collate_fn(self, batch):
 
-            raw_data_list = list(zip(*batch))
-            tensors_list, raw_text_list = raw_data_list[:-1], raw_data_list[-1]
+        raw_data_list = list(zip(*batch))
+        tensors_list, raw_text_list = raw_data_list[:-1], raw_data_list[-1]
 
-            return_list = []
-            # PADDING
-            for _idx_t, _tensors in enumerate(tensors_list):
-                if _idx_t % 3 == 0:
-                    padding_value = self._pad_id
-                elif _idx_t == 5:
-                    padding_value = -1  # padding for sent_labels
-                else:
-                    padding_value = 0
+        return_list = []
+        # PADDING
+        for _idx_t, _tensors in enumerate(tensors_list):
+            if _idx_t % 3 == 0:
+                padding_value = self._pad_id
+            elif _idx_t == 5:
+                padding_value = -1  # padding for sent_labels
+            else:
+                padding_value = 0
 
-                if _idx_t == 3 or _idx_t == 4:  # sent_input_ids, sent_mask_ids
-                    # 2D padding
-                    _max_len_last_dim = 0
-                    for _tensor in _tensors:
-                        _local_max_len_last_dim = max(len(_t) for _t in list(_tensor))
-                        _max_len_last_dim = max(_max_len_last_dim, _local_max_len_last_dim)
-                    # padding
-                    _new_tensors = []
-                    for _tensor in _tensors:
-                        inner_tensors = []
-                        for idx, _ in enumerate(list(_tensor)):
-                            _pad_shape = _max_len_last_dim - len(_tensor[idx])
-                            _pad_tensor = torch.tensor([padding_value] * _pad_shape, device=_tensor[idx].device,
-                                                       dtype=_tensor[idx].dtype)
-                            _new_inner_tensor = torch.cat([_tensor[idx], _pad_tensor], dim=0)
-                            inner_tensors.append(_new_inner_tensor)
-                        _tensors_tuple = tuple(ts for ts in inner_tensors)
-                        _new_tensors.append(torch.stack(_tensors_tuple, dim=0))
+            if _idx_t == 3 or _idx_t == 4:  # sent_input_ids, sent_mask_ids
+                # 2D padding
+                _max_len_last_dim = 0
+                for _tensor in _tensors:
+                    _local_max_len_last_dim = max(len(_t) for _t in list(_tensor))
+                    _max_len_last_dim = max(_max_len_last_dim, _local_max_len_last_dim)
+                # padding
+                _new_tensors = []
+                for _tensor in _tensors:
+                    inner_tensors = []
+                    for idx, _ in enumerate(list(_tensor)):
+                        _pad_shape = _max_len_last_dim - len(_tensor[idx])
+                        _pad_tensor = torch.tensor([padding_value] * _pad_shape, device=_tensor[idx].device,
+                                                   dtype=_tensor[idx].dtype)
+                        _new_inner_tensor = torch.cat([_tensor[idx], _pad_tensor], dim=0)
+                        inner_tensors.append(_new_inner_tensor)
+                    _tensors_tuple = tuple(ts for ts in inner_tensors)
+                    _new_tensors.append(torch.stack(_tensors_tuple, dim=0))
+                return_list.append(
+                    torch.nn.utils.rnn.pad_sequence(_new_tensors, batch_first=True, padding_value=padding_value),
+                )
+            else:
+                if _tensors[0].dim() >= 1:
                     return_list.append(
-                        torch.nn.utils.rnn.pad_sequence(_new_tensors, batch_first=True, padding_value=padding_value),
+                        torch.nn.utils.rnn.pad_sequence(_tensors, batch_first=True, padding_value=padding_value),
                     )
                 else:
-                    if _tensors[0].dim() >= 1:
-                        return_list.append(
-                            torch.nn.utils.rnn.pad_sequence(_tensors, batch_first=True, padding_value=padding_value),
-                        )
-                    else:
-                        return_list.append(torch.stack(_tensors, dim=0))
-            return tuple(return_list), raw_text_list
+                    return_list.append(torch.stack(_tensors, dim=0))
+        return tuple(return_list), raw_text_list
 
-        def __len__(self):
-            return len(self.example_list)
+    def __len__(self):
+        return len(self.example_list)
 
 
+# Used in Step-2: Prepare the prompt based on the extracted sentences.
 class Stage2DatasetForLLM(Dataset):
     def __init__(
             self, dataset_name, news_dataset,
