@@ -1,0 +1,7 @@
+tqdm
+pandas
+transformers
+scikit-learn
+tensorboardx
+numpy~=1.24.3
+openai
