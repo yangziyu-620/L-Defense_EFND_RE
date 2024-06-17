@@ -11,6 +11,7 @@ import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
+
 # print(type(BASE_DIR))
 
 def define_hparams_training(parser):
@@ -152,10 +153,12 @@ def cut_off_text(text, prompt):
     cutoff_phrase = prompt
     index = text.find(cutoff_phrase)
     if index == -1:
-        return text[:index]
-    else:
         return text
+    else:
+        return text[:index]
 
+
+# if there is problem, try to find if it is true
 
 def remove_substring(string, substring):
     results = []
