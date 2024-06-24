@@ -10,6 +10,10 @@ gen
 /dataset/RAWFC
 /source/runnings
 /runnings
+<<<<<<< HEAD
 /__pycache__
 /dataset
 /__pycache__
+=======
+.DS_Store
+>>>>>>> d6aeb09aee1a247998cb85e8e802843566876b2f
