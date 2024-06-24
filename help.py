@@ -45,7 +45,7 @@ def define_hparams_training(parser):
     parser.add_argument("--learning_rate", default=5e-5, type=float,
                         help="The initial learning rate for Adam.")
     parser.add_argument("--weight_decay", default=0.0, type=float,
-                        help="Weight deay if we apply some.")
+                        help="Weight decay if we apply some.")
     parser.add_argument("--adam_epsilon", default=1e-8, type=float,
                         help="Epsilon for Adam optimizer.")
     parser.add_argument("--adam_betas", default=None, type=str,
@@ -153,9 +153,9 @@ def cut_off_text(text, prompt):
     cutoff_phrase = prompt
     index = text.find(cutoff_phrase)
     if index == -1:
-        return text
-    else:
         return text[:index]
+    else:
+        return text
 
 
 # if there is problem, try to find if it is true

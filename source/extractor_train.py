@@ -158,12 +158,14 @@ def train(args, train_dataset, model, tokenizer, eval_dataset=None, eval_fn=None
                         save_model_with_default_name(args.output_dir, model, tokenizer, args)
                         metric_best = results['f1']
 
-            if args.max_steps > 0 and global_step > args.max_steps:
+            # if args.max_steps > 0 and global_step > args.max_steps:
+            if 0 < args.max_steps < global_step:
                 epoch_iterator.close()
                 break
 
         # can add epoch evaluation
-        if args.max_steps > 0 and global_step > args.max_steps:
+        # if args.max_steps > 0 and global_step > args.max_steps:
+        if 0 < args.max_steps < global_step:
             train_iterator.close()
             break
 

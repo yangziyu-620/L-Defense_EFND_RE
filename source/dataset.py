@@ -127,8 +127,9 @@ class NewsDataset(Dataset):
         )
 
     def load_raw(self, dataset):
-        '''parsing dict objs to list '''
-        # event_id, claim, label, explain, (link, content, domain, report_sents, report_sents_is_evidence, report_sents_belong_which_report)
+        """parsing dict objs to list """
+        # event_id, claim, label, explain, (link, content, domain, report_sents, report_sents_is_evidence,
+        # report_sents_belong_which_report)
         raw_data = [[] for _ in range(11)]
         for obj in tqdm(dataset):
             # each sample has one
